@@ -10,5 +10,5 @@ With mine you can bootstrap your next eisen project with zero hassle.
 mine new PROJECT_NAME
 
 # create a new component
-mine new component COMPONENT_NAME
+mine component COMPONENT_NAME
 ```

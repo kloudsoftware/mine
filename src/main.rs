@@ -1,14 +1,23 @@
 mod args;
-mod componentgen;
 mod error;
+mod git;
+mod componentgen;
 mod projectgen;
 
 async fn run() -> Result<(), error::MineError> {
     let args = args::get_args();
-
     return match args.subcommand_name() {
-        Some("new") => projectgen::generate().await,
-        Some("component") => componentgen::generate().await,
+        Some(args::ARG_NEW) => {
+            projectgen::generate(args.subcommand_matches(args::ARG_NEW).unwrap().clone()).await
+        }
+        Some(args::ARG_COMPONENT) => {
+            componentgen::generate(
+                args.subcommand_matches(args::ARG_COMPONENT)
+                    .unwrap()
+                    .clone(),
+            )
+            .await
+        }
         _ => Err(error::MineError::IllegalArgumentConfiguration),
     };
 }

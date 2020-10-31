@@ -1,5 +1,5 @@
 use crate::error;
 
-pub fn generate() -> Result<(), error::MineError> {
+pub async fn generate() -> Result<(), error::MineError> {
     Ok(())
 }

@@ -1,8 +1,16 @@
 mod args;
-mod error;
-mod git;
 mod componentgen;
+mod error;
+mod files;
+mod git;
+mod npm;
 mod projectgen;
+
+#[macro_use]
+extern crate async_trait;
+
+#[macro_use]
+extern crate serde;
 
 async fn run() -> Result<(), error::MineError> {
     let args = args::get_args();

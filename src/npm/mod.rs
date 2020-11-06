@@ -15,6 +15,7 @@ pub async fn get_current_version_of_packages(
 }
 
 pub async fn get_current_version_of_package(package: &str) -> Result<String, error::MineError> {
+    println!("fetching package {}", package);
     let response: types::NpmResponse =
         reqwest::get(&format!("https://api.npms.io/v2/search?q={}", package))
             .await?

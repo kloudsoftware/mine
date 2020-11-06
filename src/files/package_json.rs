@@ -1,5 +1,5 @@
 use crate::error;
-use crate::files::{self, FileGen, FileMetaInfo};
+use crate::files::{FileGen, FileMetaInfo};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::collections::HashMap;
 use std::path::Path;
@@ -7,112 +7,87 @@ use std::path::Path;
 pub struct PackageJsonGenerator {}
 
 /// representation of a package json file
-struct PackageJson<'a> {
+#[derive(Debug, Default)]
+struct PackageJson {
     /// project name
-    name: &'a str,
+    name: String,
     /// project version
-    version: &'a str,
+    version: String,
     /// description about the project
-    description: &'a str,
+    description: String,
     /// entrypoint js or ts file
-    main: &'a str,
+    main: String,
     /// script shorthands
-    scripts: Vec<Script<'a>>,
+    scripts: HashMap<String, String>,
     /// author of the project
-    author: &'a str,
+    author: String,
     /// the license of the project
-    license: &'a str,
+    license: String,
     /// the production dependencies
-    dependencies: Vec<Dependency<'a>>,
+    dependencies: HashMap<String, String>,
     /// the dev dependencies
-    dev_dependencies: Vec<Dependency<'a>>,
+    dev_dependencies: HashMap<String, String>,
 }
 
-impl Serialize for PackageJson<'_> {
+impl Serialize for PackageJson {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         let mut s = serializer.serialize_struct("package_json", 4)?;
 
-        let mut dep_map = HashMap::new();
-        for d in &self.dependencies {
-            dep_map.insert(d.name, d.version);
-        }
-        let mut dev_dep_map = HashMap::new();
-        for d in &self.dev_dependencies {
-            dev_dep_map.insert(d.name, d.version);
-        }
-        let mut script_map = HashMap::new();
-        for s in &self.scripts {
-            script_map.insert(s.name, s.command);
-        }
-
-        s.serialize_field("name", self.name)?;
-        s.serialize_field("version", self.version)?;
-        s.serialize_field("description", self.description)?;
-        s.serialize_field("author", self.author)?;
-        s.serialize_field("main", self.main)?;
-        s.serialize_field("license", self.license)?;
-        s.serialize_field("dependencies", &dep_map)?;
-        s.serialize_field("devDependencies", &dev_dep_map)?;
-        s.serialize_field("scripts", &script_map)?;
+        s.serialize_field("name", self.name.as_str())?;
+        s.serialize_field("version", self.version.as_str())?;
+        s.serialize_field("description", self.description.as_str())?;
+        s.serialize_field("author", self.author.as_str())?;
+        s.serialize_field("main", self.main.as_str())?;
+        s.serialize_field("license", self.license.as_str())?;
+        s.serialize_field("dependencies", &self.dependencies)?;
+        s.serialize_field("devDependencies", &self.dev_dependencies)?;
+        s.serialize_field("scripts", &self.scripts)?;
         s.end()
     }
 }
 
-/// representation of a npm dependency
-struct Dependency<'a> {
-    /// the name of the dependency
-    name: &'a str,
-    /// the version of the dependency
-    version: &'a str,
-}
-
-/// representation of a script key value  pair
-/// inside a package json
-struct Script<'a> {
-    /// the name used to call the command
-    name: &'a str,
-    /// the command being executed
-    command: &'a str,
-}
-
 #[async_trait]
 impl FileGen for PackageJsonGenerator {
+    // TODO make more fields configurable
     async fn generate(&self, meta: &FileMetaInfo) -> Result<(), error::MineError> {
-        let file = &format!(
-            r#"{{
-  "name": "{}",
-  "version": "1.0.0",
-  "description": "An eisen Project",
-  "main": "index.ts",
-  "scripts": {{
-    "dev": "npx parcel src/index.html",
-    "build": "npx parcel build src/index.html",
-    "clean": "rm -rf dist/ && rm -rf lib/" }},
-  "author": "",
-  "license": "ISC",
-    "dependencies": {{
-    "@kloudsoftware/eisen": "{}",
-    "postcss": "^7.0.18",
-    "tailwindcss": "^1.1.2"
-  }},
-  "devDependencies": {{
-    "parcel-bundler": "^1.12.4",
-    "parcel-plugin-purgecss": "^2.1.2",
-    "parcel-plugin-static-files-copy": "^2.0.0",
-    "sass": "^1.18.0",
-    "typescript": "^3.4.2"
-  }}
- }}"#,
-            meta.project_name,
-            meta.package_versions.get(files::EISEN_PACKAGE).unwrap()
-        );
+        let mut package_json = PackageJson::default();
+        package_json.name = meta.project_name.clone();
+        package_json.dependencies = meta.package_versions.clone();
+        package_json.dev_dependencies = meta.dev_package_versions.clone();
+        package_json.main = "index.ts".to_string();
+        package_json.version = "0.0.1".to_string();
+        package_json.author = get_author();
+        package_json.scripts = get_scripts();
 
         let fmt = &format!("{}/package.json", meta.project_name);
         let p = Path::new(fmt);
-        std::fs::write(p, file)?;
+
+        let s = serde_json::to_string(&package_json).expect("TODO");
+        std::fs::write(p, s)?;
         Ok(())
     }
+}
+
+fn get_author() -> String {
+    match std::env::var("USER") {
+        Ok(s) => s,
+        _ => "".to_string(),
+    }
+}
+
+fn get_scripts() -> HashMap<String, String> {
+    let mut scripts = HashMap::new();
+    scripts.insert("dev".to_string(), "npx parcel src/index.html".to_string());
+    scripts.insert(
+        "build".to_string(),
+        "npx parcel build src/index.html".to_string(),
+    );
+    scripts.insert(
+        "clean".to_string(),
+        "rm -rf dist && rm -rf lib/".to_string(),
+    );
+    scripts
 }

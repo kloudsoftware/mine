@@ -1,13 +1,12 @@
 use crate::error;
 use crate::files::{FileGen, FileMetaInfo};
-use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::collections::HashMap;
 use std::path::Path;
 
 pub struct PackageJsonGenerator {}
 
 /// representation of a package json file
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 struct PackageJson {
     /// project name
     name: String,
@@ -27,26 +26,6 @@ struct PackageJson {
     dependencies: HashMap<String, String>,
     /// the dev dependencies
     dev_dependencies: HashMap<String, String>,
-}
-
-impl Serialize for PackageJson {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut s = serializer.serialize_struct("package_json", 4)?;
-
-        s.serialize_field("name", self.name.as_str())?;
-        s.serialize_field("version", self.version.as_str())?;
-        s.serialize_field("description", self.description.as_str())?;
-        s.serialize_field("author", self.author.as_str())?;
-        s.serialize_field("main", self.main.as_str())?;
-        s.serialize_field("license", self.license.as_str())?;
-        s.serialize_field("dependencies", &self.dependencies)?;
-        s.serialize_field("devDependencies", &self.dev_dependencies)?;
-        s.serialize_field("scripts", &self.scripts)?;
-        s.end()
-    }
 }
 
 #[async_trait]
